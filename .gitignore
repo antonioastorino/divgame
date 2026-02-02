@@ -1,0 +1,5 @@
+*.swp
+*.swo
+package-lock.json
+*.wasm
+*.wat
