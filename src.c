@@ -14,12 +14,15 @@
 #define WINDOW_HEIGHT_PX (600)
 #define WALL_WIDTH_PX (1000)
 #define WALL_HEIGHT_PX (600)
-#define WALL_BORDER_PX (100)
+#define WALL_BORDER_PX (1000)
 #define FOV_MAX_Z (10)
 #define FOV_MIN_Z (1)
 #define NUM_OF_WALLS (20)
-#define PLAYER_SPEED_Z (1.0)
-#define PLAYER_SPEED_XY (200)
+#define PLAYER_SPEED_Z (1.5)
+#define PLAYER_SPEED_XY (400)
+#define PLAYER_SIZE_PX (100)
+#define MAX_PLAYER_POS_X ((WALL_WIDTH_PX - PLAYER_SIZE_PX) / 2)
+#define MAX_PLAYER_POS_Y ((WALL_HEIGHT_PX - PLAYER_SIZE_PX) / 2)
 
 typedef struct
 {
@@ -154,7 +157,22 @@ void __update_player(void)
     {
         g_player.position.x -= PLAYER_SPEED_XY * g_dt;
     }
-    jsLogVector3D(g_player.position);
+    if (g_player.position.x > MAX_PLAYER_POS_X)
+    {
+        g_player.position.x = MAX_PLAYER_POS_X;
+    }
+    if (g_player.position.x < -MAX_PLAYER_POS_X)
+    {
+        g_player.position.x = -MAX_PLAYER_POS_X;
+    }
+    if (g_player.position.y > MAX_PLAYER_POS_Y)
+    {
+        g_player.position.y = MAX_PLAYER_POS_Y;
+    }
+    if (g_player.position.y < -MAX_PLAYER_POS_Y)
+    {
+        g_player.position.y = -MAX_PLAYER_POS_Y;
+    }
 }
 
 void __evolve_wall(int wall_index)

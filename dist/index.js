@@ -97,6 +97,16 @@ const importObj = {
 window.onload = () => {
   const canvas = document.getElementById("canvas");
   const body = document.getElementById("body");
+  const player = document.getElementById("player");
+  player.style.position = "absolute";
+  player.style.backgroundImage = "url(./assets/player.png)";
+  player.style.width = "100px";
+  player.style.height = "100px";
+  player.style.display = "block";
+  player.style.left = "calc(50% - 50px)";
+  player.style.bottom = "calc(50% - 50px)";
+  player.style.zIndex = 100000;
+
   body.style.backgroundColor = "#101010";
   body.style.overflow = "hidden";
   canvas.style.position = "absolute";
