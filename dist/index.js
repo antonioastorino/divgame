@@ -101,6 +101,7 @@ window.onload = () => {
   body.style.overflow = "hidden";
   canvas.style.position = "absolute";
   canvas.style.backgroundColor = "blue";
+  canvas.style.overflow = "hidden";
 
   WebAssembly.instantiateStreaming(wasmFile, importObj).then((result) => {
     memory = result.instance.exports.memory;
