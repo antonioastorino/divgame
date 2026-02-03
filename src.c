@@ -67,9 +67,24 @@ typedef struct
     int num_of_walls;
 } EngineParams;
 
-float g_dt = 0;
+typedef struct
+{
+    int ticks;
+    int inc_x;
+    int inc_y;
+} PathElement;
 
-Wall g_walls[NUM_OF_WALLS];
+float g_dt                 = 0;
+int g_keys_pressed         = 0;
+Wall g_walls[NUM_OF_WALLS] = {0};
+Entity g_player            = (Entity){(Vector3D){.x = 0, .y = 0, .z = 0}, .alive = TRUE, .animated = TRUE};
+const PathElement g_path[] = {
+    {10, 0, 0},
+    {20, 10, 0},
+    {20, 0, 10},
+    {20, -10, -10},
+    {10, 0, 0},
+};
 
 void jsLogVector3D(Vector3D);
 void jsLogCStr(char*);
@@ -78,13 +93,6 @@ void jsLogFloat(float);
 float jsGetDt(void);
 void jsSetEngineParams(EngineParams);
 void jsUpdateWallRect(int, Rect, int, float);
-
-int g_keys_pressed = 0;
-
-Entity g_player = (Entity){
-    (Vector3D){.x = 0, .y = 0, .z = 0},
-    .alive    = TRUE,
-    .animated = TRUE};
 
 void engine_init(void)
 {
@@ -177,11 +185,31 @@ void __update_player(void)
 
 void __evolve_wall(int wall_index)
 {
+    static int tick               = 0;
+    static float position_x       = 0.0;
+    static float position_y       = 0.0;
+    static int path_element_index = 0;
+    static int tick_threshold     = 10;
+    if (tick == tick_threshold)
+    {
+        tick               = 0;
+        path_element_index = (path_element_index + 1) % (sizeof(g_path) / sizeof(g_path[0]));
+        tick_threshold     = g_path[path_element_index].ticks;
+    }
+
     Wall* wall_p = &g_walls[wall_index];
     wall_p->world.position.z -= PLAYER_SPEED_Z * g_dt;
-    if (wall_p->world.position.z < FOV_MIN_Z)
+    if (wall_p->world.position.z <= FOV_MIN_Z)
     {
+        position_x += g_path[path_element_index].inc_x;
+        position_y += g_path[path_element_index].inc_y;
+        tick++;
+        jsLogInt(path_element_index);
+        jsLogFloat(position_x);
+        jsLogFloat(position_y);
         wall_p->world.position.z += (float)(FOV_MAX_Z - FOV_MIN_Z);
+        wall_p->world.position.x = position_x;
+        wall_p->world.position.y = position_y;
     }
     wall_p->proj.position.x =                                                                        //
         (wall_p->world.position.x - wall_p->world.size.w / 2 - WALL_BORDER_PX - g_player.position.x) //
