@@ -11,8 +11,6 @@ clang \
     -Wl,--export=engine_init \
     -Wl,--export=engine_key_down \
     -Wl,--export=engine_key_up \
-    -Wl,--export=engine_get_window_height \
-    -Wl,--export=engine_get_window_width \
     -o dist/src.wasm \
     src.c
 cd dist

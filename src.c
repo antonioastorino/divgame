@@ -10,12 +10,13 @@
 #define KEY_A_MASK (1 << (KEY_A - KEY_BASE))
 #define KEY_S_MASK (1 << (KEY_S - KEY_BASE))
 #define KEY_D_MASK (1 << (KEY_D - KEY_BASE))
-#define WINDOW_WIDTH_PX (800)
+#define WINDOW_WIDTH_PX (1000)
 #define WINDOW_HEIGHT_PX (600)
+#define WALL_SEPARATION_X (300)
 #define WALL_INITIAL_Z (10)
 #define WALL_INITIAL_Y (-100)
 #define PLAYER_SPEED_Z (2)
-#define PLAYER_SPEED_XY (100)
+#define PLAYER_SPEED_XY (200)
 
 typedef int bool;
 typedef struct
@@ -50,12 +51,19 @@ typedef struct
     bool animated;
 } Entity;
 
+typedef struct
+{
+    int window_height_px;
+    int window_width_px;
+    int wall_initial_z;
+} EngineParams;
+
 float g_dt = 0;
 
 Wall g_wall = {
     .world = (Rect){
         .position = (Vector3D){
-            .x = -400,
+            .x = 0,
             .y = WALL_INITIAL_Y,
             .z = WALL_INITIAL_Z,
         },
@@ -71,18 +79,24 @@ void jsLogCStr(char*);
 void jsLogInt(int);
 void jsLogFloat(float);
 float jsGetDt(void);
+void jsSetEngineParams(EngineParams);
 void jsUpdateWallRect(Rect);
 
 int g_keys_pressed = 0;
 
 Entity g_player = (Entity){
-    (Vector3D){.x = 100, .y = 100, .z = 0},
+    (Vector3D){.x = 0, .y = 0, .z = 0},
     .alive    = TRUE,
     .animated = TRUE};
 
 void engine_init(void)
 {
     jsLogCStr("Init game\0");
+    jsSetEngineParams((EngineParams){
+        .window_height_px = WINDOW_HEIGHT_PX,
+        .window_width_px  = WINDOW_WIDTH_PX,
+        .wall_initial_z   = WALL_INITIAL_Z,
+    });
 }
 
 void engine_key_down(int key_code)
@@ -137,19 +151,10 @@ void __update_wall()
     }
     g_wall.proj.position.x = (g_wall.world.position.x - g_wall.world.size.w / 2 - g_player.position.x) / g_wall.world.position.z + WINDOW_WIDTH_PX / 2;
     g_wall.proj.position.y = (g_wall.world.position.y - g_wall.world.size.h / 2 - g_player.position.y) / g_wall.world.position.z + WINDOW_HEIGHT_PX / 2;
+    g_wall.proj.position.z = g_wall.world.position.z;
     g_wall.proj.size.w     = g_wall.world.size.w / g_wall.world.position.z;
     g_wall.proj.size.h     = g_wall.world.size.h / g_wall.world.position.z;
     jsUpdateWallRect(g_wall.proj);
-}
-
-int engine_get_window_height(void)
-{
-    return WINDOW_HEIGHT_PX;
-}
-
-int engine_get_window_width(void)
-{
-    return WINDOW_WIDTH_PX;
 }
 
 void engine_update()
