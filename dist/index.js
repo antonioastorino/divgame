@@ -125,6 +125,7 @@ window.onload = () => {
     canvas.style.top = `calc(50% - ${g_window_height / 2}px)`;
     canvas.style.left = `calc(50% - ${g_window_width / 2}px)`;
     body.onkeydown = (ev) => {
+      console.log(ev.keyCode);
       ev.preventDefault();
       result.instance.exports.engine_key_down(ev.keyCode);
     };

@@ -12,10 +12,12 @@ This will compile the game and start a minimal HTTP server listening to port 800
 Open a Web browser at `localhost:8001`
 
 ## How to play
+- 'g' (for GO) to start
 - 'w' to move UP
 - 's' to move DOWN
 - 'a' to move LEFT
 - 'd' to move RIGHT
+- 'p' to pause
 
 ## Resources
 - [Player image](https://www.hiclipart.com/free-transparent-background-png-clipart-dswvq/download?width=100)
