@@ -18,11 +18,11 @@
 #define FOV_MAX_Z (10)
 #define FOV_MIN_Z (1)
 #define NUM_OF_WALLS (20)
-#define PLAYER_SPEED_Z (1.5)
+#define PLAYER_SPEED_Z (3)
 #define PLAYER_SPEED_XY (400)
 #define PLAYER_SIZE_PX (100)
-#define MAX_PLAYER_POS_X ((WALL_WIDTH_PX - PLAYER_SIZE_PX) / 2)
-#define MAX_PLAYER_POS_Y ((WALL_HEIGHT_PX - PLAYER_SIZE_PX) / 2)
+#define MAX_PLAYER_POS_X (10000) //((WALL_WIDTH_PX - PLAYER_SIZE_PX) / 2)
+#define MAX_PLAYER_POS_Y (10000) //((WALL_HEIGHT_PX - PLAYER_SIZE_PX) / 2)
 
 typedef struct
 {
@@ -74,16 +74,32 @@ typedef struct
     int inc_y;
 } PathElement;
 
-float g_dt                 = 0;
-int g_keys_pressed         = 0;
-Wall g_walls[NUM_OF_WALLS] = {0};
-Entity g_player            = (Entity){(Vector3D){.x = 0, .y = 0, .z = 0}, .alive = TRUE, .animated = TRUE};
-const PathElement g_path[] = {
+typedef struct
+{
+    bool player_left;
+    bool player_right;
+    bool player_up;
+    bool player_down;
+} PlayerAction;
+
+float g_dt                   = 0;
+int g_keys_pressed           = 0;
+Wall g_walls[NUM_OF_WALLS]   = {0};
+Entity g_player              = (Entity){(Vector3D){.x = 0, .y = 0, .z = 0}, .alive = TRUE, .animated = TRUE};
+PlayerAction g_player_action = {0};
+float g_path_x               = 0.0;
+float g_path_y               = 0.0;
+int g_tick                   = 0;
+const PathElement g_path[]   = {
     {10, 0, 0},
     {20, 10, 0},
     {20, 0, 10},
     {20, -10, -10},
     {10, 0, 0},
+    {10, -30, -30},
+    {10, -40, 0},
+    {10, 0, 30},
+    {10, 70, 0},
 };
 
 void jsLogVector3D(Vector3D);
@@ -147,69 +163,27 @@ void engine_key_up(int key_code)
     jsLogInt(g_keys_pressed);
 }
 
-void __update_player(void)
+void __read_input(void)
 {
-    if (g_keys_pressed & KEY_W_MASK)
-    {
-        g_player.position.y += PLAYER_SPEED_XY * g_dt;
-    }
-    if (g_keys_pressed & KEY_S_MASK)
-    {
-        g_player.position.y -= PLAYER_SPEED_XY * g_dt;
-    }
-    if (g_keys_pressed & KEY_D_MASK)
-    {
-        g_player.position.x += PLAYER_SPEED_XY * g_dt;
-    }
-    if (g_keys_pressed & KEY_A_MASK)
-    {
-        g_player.position.x -= PLAYER_SPEED_XY * g_dt;
-    }
-    if (g_player.position.x > MAX_PLAYER_POS_X)
-    {
-        g_player.position.x = MAX_PLAYER_POS_X;
-    }
-    if (g_player.position.x < -MAX_PLAYER_POS_X)
-    {
-        g_player.position.x = -MAX_PLAYER_POS_X;
-    }
-    if (g_player.position.y > MAX_PLAYER_POS_Y)
-    {
-        g_player.position.y = MAX_PLAYER_POS_Y;
-    }
-    if (g_player.position.y < -MAX_PLAYER_POS_Y)
-    {
-        g_player.position.y = -MAX_PLAYER_POS_Y;
-    }
+    g_player_action.player_up    = (g_keys_pressed & KEY_W_MASK) && (g_player.position.y <= MAX_PLAYER_POS_Y);
+    g_player_action.player_down  = (g_keys_pressed & KEY_S_MASK) && (g_player.position.y >= -MAX_PLAYER_POS_Y);
+    g_player_action.player_right = (g_keys_pressed & KEY_D_MASK) && (g_player.position.x <= MAX_PLAYER_POS_X);
+    g_player_action.player_left  = (g_keys_pressed & KEY_A_MASK) && (g_player.position.x >= -MAX_PLAYER_POS_X);
 }
 
-void __evolve_wall(int wall_index)
+void __evolve_wall(int wall_index, int path_element_index)
 {
-    static int tick               = 0;
-    static float position_x       = 0.0;
-    static float position_y       = 0.0;
-    static int path_element_index = 0;
-    static int tick_threshold     = 10;
-    if (tick == tick_threshold)
-    {
-        tick               = 0;
-        path_element_index = (path_element_index + 1) % (sizeof(g_path) / sizeof(g_path[0]));
-        tick_threshold     = g_path[path_element_index].ticks;
-    }
 
     Wall* wall_p = &g_walls[wall_index];
     wall_p->world.position.z -= PLAYER_SPEED_Z * g_dt;
     if (wall_p->world.position.z <= FOV_MIN_Z)
     {
-        position_x += g_path[path_element_index].inc_x;
-        position_y += g_path[path_element_index].inc_y;
-        tick++;
-        jsLogInt(path_element_index);
-        jsLogFloat(position_x);
-        jsLogFloat(position_y);
+        g_path_x += g_path[path_element_index].inc_x;
+        g_path_y += g_path[path_element_index].inc_y;
+        g_tick++;
         wall_p->world.position.z += (float)(FOV_MAX_Z - FOV_MIN_Z);
-        wall_p->world.position.x = position_x;
-        wall_p->world.position.y = position_y;
+        wall_p->world.position.x = g_path_x;
+        wall_p->world.position.y = g_path_y;
     }
     wall_p->proj.position.x =                                                                        //
         (wall_p->world.position.x - wall_p->world.size.w / 2 - WALL_BORDER_PX - g_player.position.x) //
@@ -226,13 +200,41 @@ void __evolve_wall(int wall_index)
     wall_p->border_width    = WALL_BORDER_PX / wall_p->world.position.z;
 }
 
+void __evolve(void)
+{
+    static int path_element_index = 0;
+    static int tick_threshold     = 10;
+    if (g_tick == tick_threshold)
+    {
+        g_tick             = 0;
+        path_element_index = (path_element_index + 1) % (sizeof(g_path) / sizeof(g_path[0]));
+        tick_threshold     = g_path[path_element_index].ticks;
+    }
+    for (int wall_index = 0; wall_index < NUM_OF_WALLS; wall_index++)
+    {
+        __evolve_wall(wall_index, path_element_index);
+    }
+}
+
+void __update_output(void)
+{
+    g_player.position.y += PLAYER_SPEED_XY * g_dt * g_player_action.player_up;
+    g_player.position.y -= PLAYER_SPEED_XY * g_dt * g_player_action.player_down;
+    g_player.position.x += PLAYER_SPEED_XY * g_dt * g_player_action.player_right;
+    g_player.position.x -= PLAYER_SPEED_XY * g_dt * g_player_action.player_left;
+    for (int wall_index = 0; wall_index < NUM_OF_WALLS; wall_index++)
+    {
+        jsUpdateWallRect(wall_index, //
+                         g_walls[wall_index].proj,
+                         g_walls[wall_index].brightness,
+                         g_walls[wall_index].border_width);
+    }
+}
+
 void engine_update(void)
 {
     g_dt = jsGetDt();
-    __update_player();
-    for (int i = 0; i < NUM_OF_WALLS; i++)
-    {
-        __evolve_wall(i);
-        jsUpdateWallRect(i, g_walls[i].proj, g_walls[i].brightness, g_walls[i].border_width);
-    }
+    __read_input();
+    __evolve();
+    __update_output();
 }
