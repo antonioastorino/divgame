@@ -9,6 +9,7 @@ let g_window_width = 0;
 let g_fov_max_z = 0;
 let g_fov_min_z = 0;
 let g_num_of_walls = 0;
+let g_player = undefined;
 
 class Wall {
   wallDiv;
@@ -18,8 +19,7 @@ class Wall {
     this.wallDiv.style.position = "absolute";
     this.wallDiv.style.borderStyle = "solid";
     this.obstacleDiv = document.createElement("div");
-    this.obstacleDiv.style.position = "relative";
-    this.obstacleDiv.style.backgroundColor = "red";
+    this.obstacleDiv.style.position = "absolute";
     this.obstacleDiv.style.width = "100px";
     this.obstacleDiv.style.height = "100px";
     this.obstacleDiv.style.display = "none";
@@ -38,11 +38,25 @@ class Wall {
     this.wallDiv.style.borderWidth = `${border_width}px`;
   }
 
-  updateObstacle(x, y, w, h) {
+  updateObstacleRect(x, y, w, h) {
     this.obstacleDiv.style.left = `${x}px`;
-    this.obstacleDiv.style.top = `${y}px`;
+    this.obstacleDiv.style.bottom = `${y}px`;
     this.obstacleDiv.style.width = `${w}px`;
     this.obstacleDiv.style.height = `${h}px`;
+  }
+
+  checkCollision() {
+    const obstacleRect = this.obstacleDiv.getBoundingClientRect();
+    const playerRect = g_player.getBoundingClientRect();
+    if (
+      obstacleRect.left < playerRect.right &&
+      obstacleRect.right > playerRect.left &&
+      obstacleRect.top < playerRect.bottom &&
+      obstacleRect.bottom > playerRect.top
+    ) {
+      return true;
+    }
+    return false;
   }
 }
 
@@ -71,16 +85,27 @@ const jsLogFloat = (v) => {
   console.log(`float: ${v}`);
 };
 
-function jsUpdateWall(wallNumber, wall_rect_p, brightness, border_width, obstacle_present, obstacle_rect_p) {
+function jsInitBomb(wallIndex) {
+  g_walls[wallIndex].obstacleDiv.style.display = "block";
+  g_walls[wallIndex].obstacleDiv.style.backgroundImage = "url(/assets/bomb.png)";
+  g_walls[wallIndex].obstacleDiv.style.backgroundSize = "contain";
+}
+
+function jsInitCoin(wallIndex) {
+  g_walls[wallIndex].obstacleDiv.style.display = "block";
+  g_walls[wallIndex].obstacleDiv.style.backgroundImage = "url(/assets/spinning-coin.gif)";
+  g_walls[wallIndex].obstacleDiv.style.backgroundSize = "contain";
+}
+
+function jsUpdateWall(wallIndex, wall_rect_p, brightness, border_width, obstacle_present, obstacle_rect_p) {
   const [x, y, z, w, h] = new Float32Array(memory.buffer, wall_rect_p, 5);
   if (obstacle_present == 1) {
     const [o_x, o_y, _, o_w, o_h] = new Float32Array(memory.buffer, obstacle_rect_p, 5);
-    g_walls[wallNumber].obstacleDiv.style.display = "block";
-    g_walls[wallNumber].updateObstacle(o_x, o_y, o_w, o_h);
+    g_walls[wallIndex].updateObstacleRect(o_x, o_y, o_w, o_h);
   } else {
-    g_walls[wallNumber].obstacleDiv.style.display = "none";
+    g_walls[wallIndex].obstacleDiv.style.display = "none";
   }
-  g_walls[wallNumber].update(x, y, z, w, h, brightness, border_width);
+  g_walls[wallIndex].update(x, y, z, w, h, brightness, border_width);
 }
 
 function jsSetEngineParams(params_p) {
@@ -114,6 +139,10 @@ function jsGetRandom() {
   return Math.random();
 }
 
+function jsCheckCollision(wallIndex) {
+  return g_walls[wallIndex].checkCollision();
+}
+
 const importObj = {
   env: {
     jsLogVector3D,
@@ -124,21 +153,24 @@ const importObj = {
     jsSetEngineParams,
     jsUpdateWall,
     jsGetRandom,
+    jsInitBomb,
+    jsInitCoin,
+    jsCheckCollision,
   },
 };
 
 window.onload = () => {
   const canvas = document.getElementById("canvas");
   const body = document.getElementById("body");
-  const player = document.getElementById("player");
-  player.style.position = "absolute";
-  player.style.backgroundImage = "url(./assets/player.png)";
-  player.style.width = "100px";
-  player.style.height = "100px";
-  player.style.display = "block";
-  player.style.left = "calc(50% - 50px)";
-  player.style.bottom = "calc(50% - 50px)";
-  player.style.zIndex = 100000;
+  g_player = document.getElementById("player");
+  g_player.style.position = "absolute";
+  g_player.style.backgroundImage = "url(./assets/player.png)";
+  g_player.style.width = "100px";
+  g_player.style.height = "100px";
+  g_player.style.display = "block";
+  g_player.style.left = "calc(50% - 50px)";
+  g_player.style.bottom = "calc(50% - 50px)";
+  g_player.style.zIndex = 100000;
 
   body.style.backgroundColor = "#101010";
   body.style.overflow = "hidden";
@@ -158,7 +190,6 @@ window.onload = () => {
     canvas.style.top = `calc(50% - ${g_window_height / 2}px)`;
     canvas.style.left = `calc(50% - ${g_window_width / 2}px)`;
     body.onkeydown = (ev) => {
-      console.log(ev.keyCode);
       ev.preventDefault();
       result.instance.exports.engine_key_down(ev.keyCode);
     };

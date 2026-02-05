@@ -29,7 +29,7 @@
 #define OBSTACLE_SIZE_PX (100)
 #define MAX_PLAYER_POS_X (10000) //((WALL_WIDTH_PX - PLAYER_SIZE_PX) / 2)
 #define MAX_PLAYER_POS_Y (10000) //((WALL_HEIGHT_PX - PLAYER_SIZE_PX) / 2)
-
+#define WALL_GAP_Z ((float)(FOV_MAX_Z - FOV_MIN_Z) / (float)NUM_OF_WALLS)
 typedef struct
 {
     float x;
@@ -55,9 +55,16 @@ typedef struct
     Size2D size;
 } Rect;
 
+typedef enum
+{
+    OBSTACLE_COIN,
+    OBSTACLE_BOMB,
+} ObstacleType;
+
 typedef struct
 {
     bool present;
+    ObstacleType type;
     Vector2D position;
     Rect proj_rect;
 } Obstacle;
@@ -122,6 +129,7 @@ float g_path_y               = 0.0;
 int g_tick                   = 0;
 bool g_prev_pause_pressed    = false;
 GameState g_game_state       = GAME_BEGIN;
+int g_collision_counter      = 0;
 
 const PathElement g_path[] = {
     {10, 0, 0},
@@ -143,13 +151,16 @@ float jsGetDt(void);
 void jsSetEngineParams(EngineParams);
 void jsUpdateWall(int, Rect, int, float, bool, Rect);
 float jsGetRandom(void);
+bool jsCheckCollision(int);
+void jsInitBomb(int);
+void jsInitCoin(int);
 
 void engine_init(void)
 {
     jsLogCStr("Init game\0");
     for (int i = 0; i < NUM_OF_WALLS; i++)
     {
-        float position_z = (float)i * (float)(FOV_MAX_Z - FOV_MIN_Z) / (float)NUM_OF_WALLS + (float)FOV_MIN_Z;
+        float position_z = (float)i * WALL_GAP_Z + (float)FOV_MIN_Z;
         g_walls[i]       = (Wall){
                   .world = (Rect){
                       .position = (Vector3D){
@@ -229,19 +240,48 @@ void __evolve_wall(int wall_index, int path_element_index)
         g_dt         = jsGetDt();
         Wall* wall_p = &g_walls[wall_index];
         wall_p->world.position.z -= PLAYER_SPEED_Z * g_dt;
+        if (wall_p->obstacle.present                   //
+            && wall_p->world.position.z > FOV_MIN_Z && //
+            wall_p->world.position.z <= ((float)FOV_MIN_Z + WALL_GAP_Z))
+        {
+            if (jsCheckCollision(wall_index))
+            {
+                if (wall_p->obstacle.type == OBSTACLE_BOMB)
+                {
+                    g_collision_counter--;
+                }
+                else
+                {
+                    g_collision_counter++;
+                }
+                wall_p->obstacle.present = false;
+                jsLogInt(g_collision_counter);
+            }
+        }
         if (wall_p->world.position.z <= FOV_MIN_Z)
         {
+            // Reset near-field wall so that it reappears in the back
             g_path_x += g_path[path_element_index].inc_x;
             g_path_y += g_path[path_element_index].inc_y;
             g_tick++;
             wall_p->world.position.z += (float)(FOV_MAX_Z - FOV_MIN_Z);
             wall_p->world.position.x = g_path_x;
             wall_p->world.position.y = g_path_y;
-            if (jsGetRandom() < 0.1)
+            if (jsGetRandom() < 0.2)
             {
                 wall_p->obstacle.present    = true;
                 wall_p->obstacle.position.x = jsGetRandom() * (WALL_WIDTH_PX - OBSTACLE_SIZE_PX);
                 wall_p->obstacle.position.y = jsGetRandom() * (WALL_HEIGHT_PX - OBSTACLE_SIZE_PX);
+                if (jsGetRandom() < 0.5)
+                {
+                    jsInitBomb(wall_index);
+                    wall_p->obstacle.type = OBSTACLE_BOMB;
+                }
+                else
+                {
+                    jsInitCoin(wall_index);
+                    wall_p->obstacle.type = OBSTACLE_COIN;
+                }
             }
             else
             {

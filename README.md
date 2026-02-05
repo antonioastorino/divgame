@@ -20,7 +20,9 @@ Open a Web browser at `localhost:8001`
 - 'p' to pause
 
 ## Resources
-- [Player image](https://www.hiclipart.com/free-transparent-background-png-clipart-dswvq/download?width=100)
+- [Player image](https://www.hiclipart.com/free-transparent-background-png-clipart-dswvq)
+- [Bomb png](https://www.pngegg.com/en/png-khodp)
+- [Coin gif](https://pixabay.com/gifs/coin-money-currency-coins-gold-20749/)
 - [Compiling C to WASM](https://depth-first.com/articles/2019/10/16/compiling-c-to-webassembly-and-running-it-without-emscripten/)
 
 ## Compiler/linker errors on MacOS
