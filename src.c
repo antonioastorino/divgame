@@ -361,9 +361,10 @@ void __update_output(void)
     }
 }
 
-void engine_update(void)
+GameState engine_update(void)
 {
     __read_input();
     __evolve();
     __update_output();
+    return g_game_state;
 }

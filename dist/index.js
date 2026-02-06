@@ -10,11 +10,13 @@ let g_fov_max_z = 0;
 let g_fov_min_z = 0;
 let g_num_of_walls = 0;
 let g_player = undefined;
+let g_canvas = undefined;
+let g_beginView = undefined;
 
 class Wall {
   wallDiv;
   obstacleDiv;
-  constructor(canvas) {
+  constructor() {
     this.wallDiv = document.createElement("div");
     this.wallDiv.style.position = "absolute";
     this.wallDiv.style.borderStyle = "solid";
@@ -24,7 +26,7 @@ class Wall {
     this.obstacleDiv.style.height = "100px";
     this.obstacleDiv.style.display = "none";
     this.wallDiv.appendChild(this.obstacleDiv);
-    canvas.appendChild(this.wallDiv);
+    g_canvas.appendChild(this.wallDiv);
   }
 
   update(x, y, z, w, h, brightness, border_width) {
@@ -122,7 +124,12 @@ function nextFrame(t_ms) {
     g_dt = 0.05;
   }
   prevTimeStamp = t_ms;
-  g_next_frame_cb();
+  const gameState = g_next_frame_cb();
+  if (gameState == 0) {
+    console.log("Should press start");
+  } else {
+    g_beginView.style.display = "none";
+  }
   requestAnimationFrame(nextFrame);
 }
 
@@ -160,8 +167,9 @@ const importObj = {
 };
 
 window.onload = () => {
-  const canvas = document.getElementById("canvas");
+  g_canvas = document.getElementById("canvas");
   const body = document.getElementById("body");
+  g_beginView = document.getElementById("begin-view");
   g_player = document.getElementById("player");
   g_player.style.position = "absolute";
   g_player.style.backgroundImage = "url(./assets/player.png)";
@@ -170,25 +178,36 @@ window.onload = () => {
   g_player.style.display = "block";
   g_player.style.left = "calc(50% - 50px)";
   g_player.style.bottom = "calc(50% - 50px)";
-  g_player.style.zIndex = 100000;
+  g_player.style.zIndex = 99999;
 
   body.style.backgroundColor = "#101010";
   body.style.overflow = "hidden";
-  canvas.style.position = "absolute";
-  canvas.style.backgroundColor = "black";
-  canvas.style.overflow = "hidden";
+  g_canvas.style.position = "absolute";
+  g_canvas.style.backgroundColor = "black";
+  g_canvas.style.overflow = "hidden";
+  g_beginView.style.position = "relative";
+  g_beginView.style.width = "100%";
+  g_beginView.style.height = "100%";
+  g_beginView.style.backgroundColor = "blue";
+  g_beginView.style.color = "white";
+  g_beginView.style.display = "flex";
+  g_beginView.style.justifyContent = "center";
+  g_beginView.style.alignItems = "center";
+  g_beginView.style.zIndex = 100000;
+  g_beginView.style.fontSize = "xx-large";
+  g_beginView.style.fontFamily = "monospace";
 
   WebAssembly.instantiateStreaming(wasmFile, importObj).then((result) => {
     memory = result.instance.exports.memory;
     result.instance.exports.engine_init();
 
     for (let i = 0; i < g_num_of_walls; i++) {
-      g_walls.push(new Wall(canvas));
+      g_walls.push(new Wall());
     }
-    canvas.style.width = `${g_window_width}px`;
-    canvas.style.height = `${g_window_height}px`;
-    canvas.style.top = `calc(50% - ${g_window_height / 2}px)`;
-    canvas.style.left = `calc(50% - ${g_window_width / 2}px)`;
+    g_canvas.style.width = `${g_window_width}px`;
+    g_canvas.style.height = `${g_window_height}px`;
+    g_canvas.style.top = `calc(50% - ${g_window_height / 2}px)`;
+    g_canvas.style.left = `calc(50% - ${g_window_width / 2}px)`;
     body.onkeydown = (ev) => {
       ev.preventDefault();
       result.instance.exports.engine_key_down(ev.keyCode);
