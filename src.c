@@ -209,7 +209,7 @@ void __read_input(void)
     g_player_action.player_down  = (g_keys_pressed & _DOWN_MASK);
     g_player_action.player_right = (g_keys_pressed & _RIGHT_MASK);
     g_player_action.player_left  = (g_keys_pressed & _LEFT_MASK);
-    bool curr_pause_pressed      = (g_keys_pressed & _PAUSE_MASK) && (g_game_state == GAME_RUNNING);
+    bool curr_pause_pressed      = (g_keys_pressed & _PAUSE_MASK) && (g_game_state == GAME_RUNNING || g_game_state == GAME_PAUSED);
     if (!g_prev_pause_pressed && curr_pause_pressed)
     {
         g_player_action.player_pause = !g_player_action.player_pause;
